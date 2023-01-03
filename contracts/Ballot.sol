@@ -68,4 +68,15 @@ contract Ballot {
             delegate_.weight += sender.weight;
         }
     }
+
+    function vote(uint proposal) external {
+        Voter storage voter = voters[msg.sender];
+        require(voter.weight >= 1, "You have no right to vote");
+        require(!voter.voted, "You have already voted");
+
+        voter.voted = true;
+        voter.vote = proposal;
+
+        proposals[proposal].voteCount += voter.weight;
+    }
 }

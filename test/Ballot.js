@@ -175,7 +175,7 @@ describe("Ballot", () => {
         });
 
         it("should not allow delegation to non voter", async () => {
-            const [chairperson, nonVoter] = await ethers.getSigners();
+            const [_, nonVoter] = await ethers.getSigners();
 
             const factory = await ethers.getContractFactory("Ballot");
             const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
@@ -211,7 +211,7 @@ describe("Ballot", () => {
         });
 
         it("should accumulate delegations", async () => {
-            const [chairperson, voterOne, voterTwo] = await ethers.getSigners();
+            const [_, voterOne, voterTwo] = await ethers.getSigners();
 
             const factory = await ethers.getContractFactory("Ballot");
             const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
@@ -227,6 +227,87 @@ describe("Ballot", () => {
             expect(voterTwoAfterDelegation.weight).to.be.eq(3);
             expect(voterTwoAfterDelegation.voted).to.be.false;
             expect(voterTwoAfterDelegation.delegate).to.be.eq("0x0000000000000000000000000000000000000000");
+        });
+
+    });
+
+    describe("vote", () => {
+
+        it("should not allow a non voter to vote", async () => {
+            const [_, nonVoter] = await ethers.getSigners();
+
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            try {
+                await contract.connect(nonVoter).vote(1);
+                assert.fail("Try block should fail");
+            } catch (e) {
+                expect(e).to.be.a("Error");
+                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'You have no right to vote'");
+            }
+        });
+
+        it("should not allow voting twice", async () => {
+            const [_, voter] = await ethers.getSigners();
+
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voter.address);
+
+            await contract.connect(voter).vote(1);
+
+            try {
+                await contract.connect(voter).vote(1);
+                assert.fail("Try block should fail");
+            } catch (e) {
+                expect(e).to.be.a("Error");
+                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'You have already voted'");
+            }
+        });
+
+        it("should allow a voter to vote", async () => {
+            const [_, voter] = await ethers.getSigners();
+
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voter.address);
+
+            const votedProposalIndex = 1;
+
+            await contract.connect(voter).vote(votedProposalIndex);
+
+            const voterAfterVoting = await contract.voters(voter.address);
+            const votedProposal = await contract.proposals(votedProposalIndex);
+
+            expect(voterAfterVoting.voted).to.be.true;
+            expect(voterAfterVoting.vote).to.be.eq(votedProposalIndex);
+            expect(votedProposal.voteCount).to.be.eq(1);
+        });
+
+        it("should allow delegated voting", async () => {
+            const [_, voterOne, voterTwo] = await ethers.getSigners();
+
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voterOne.address);
+            await contract.giveRightToVote(voterTwo.address);
+
+            await contract.connect(voterOne).delegate(voterTwo.address);
+
+            const votedProposalIndex = 1;
+
+            await contract.connect(voterTwo).vote(votedProposalIndex);
+
+            const voterTwoAfterVoting = await contract.voters(voterTwo.address);
+            const votedProposal = await contract.proposals(votedProposalIndex);
+
+            expect(voterTwoAfterVoting.voted).to.be.true;
+            expect(voterTwoAfterVoting.vote).to.be.eq(votedProposalIndex);
+            expect(votedProposal.voteCount).to.be.eq(2);
         });
 
     });
