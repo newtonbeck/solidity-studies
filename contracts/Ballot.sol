@@ -79,4 +79,32 @@ contract Ballot {
 
         proposals[proposal].voteCount += voter.weight;
     }
+
+    function winningProposals() public view returns (uint[] memory) {
+        uint winningVoteCount = 0;
+
+        for (uint i = 0; i < proposals.length; i++) {
+            if (proposals[i].voteCount >= winningVoteCount) {
+                winningVoteCount = proposals[i].voteCount;
+            }
+        }
+
+        uint winningProposalsCount = 0;
+        for (uint i = 0; i < proposals.length; i++) {
+            if (proposals[i].voteCount == winningVoteCount) {
+                winningProposalsCount++;
+            }
+        }
+
+        uint[] memory winningProposals_ = new uint[](winningProposalsCount);
+
+        uint j = 0;
+        for (uint i = 0; i < proposals.length; i++) {
+            if (proposals[i].voteCount == winningVoteCount) {
+                winningProposals_[j++] = i;
+            }
+        }
+
+        return winningProposals_;
+    }
 }
