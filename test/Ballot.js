@@ -93,7 +93,21 @@ describe("Ballot", () => {
         });
 
         it("should revert when voter has already voted", async () => {
-            // TODO I can only implement this test once I implement the vote method
+            const [_, voter] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voter.address);
+            await contract.connect(voter).vote(1);
+
+            try {
+                await contract.giveRightToVote(voter.address);
+                assert.fail("The try code should fail");
+            } catch (e) {
+                expect(e).to.be.a("Error");
+                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'The voter already voted'");
+            }
         });
 
         it("should revert when voter's weight is greater than 0", async () => {
@@ -150,7 +164,23 @@ describe("Ballot", () => {
         });
 
         it("should not allow delegation by someone who has already voted", async () => {
-            // TODO Implement this test once the vote method is implemented
+            const [_, voterOne, voterTwo] = await ethers.getSigners();
+
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voterOne.address);
+            await contract.giveRightToVote(voterTwo.address);
+
+            await contract.connect(voterOne).vote(1);
+
+            try {
+                await contract.connect(voterOne).delegate(voterTwo.address);
+                assert.fail("The try code should fail");
+            } catch (e) {
+                expect(e).to.be.a("Error");
+                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'You already voted'");
+            }
         });
 
         it("should not allow delegation loops", async () => {
