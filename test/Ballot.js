@@ -363,4 +363,55 @@ describe("Ballot", () => {
 
     });
 
+    describe("winnersNames", () => {
+
+        it("return the winner name", async () => {
+            const [_, voterOne, voterTwo, voterThree, voterFour] = await ethers.getSigners();
+
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voterOne.address);
+            await contract.giveRightToVote(voterTwo.address);
+            await contract.giveRightToVote(voterThree.address);
+            await contract.giveRightToVote(voterFour.address);
+
+            await contract.connect(voterOne).vote(0);
+            await contract.connect(voterTwo).vote(1);
+            await contract.connect(voterThree).vote(2);
+            await contract.connect(voterFour).vote(1);
+
+            const winningProposals = await contract.winnersNames();
+
+            expect(winningProposals.length).to.be.eq(1);
+            expect(winningProposals[0]).to.be.eq(RED_PROPOSAL);
+        });
+
+        it("returns two winning names when there is a tie", async () => {
+            const [_, voterOne, voterTwo, voterThree, voterFour, voterFive] = await ethers.getSigners();
+
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voterOne.address);
+            await contract.giveRightToVote(voterTwo.address);
+            await contract.giveRightToVote(voterThree.address);
+            await contract.giveRightToVote(voterFour.address);
+            await contract.giveRightToVote(voterFive.address);
+
+            await contract.connect(voterOne).vote(0);
+            await contract.connect(voterTwo).vote(1);
+            await contract.connect(voterThree).vote(2);
+            await contract.connect(voterFour).vote(1);
+            await contract.connect(voterFive).vote(2);
+
+            const winningProposals = await contract.winnersNames();
+
+            expect(winningProposals.length).to.be.eq(2);
+            expect(winningProposals[0]).to.be.eq(RED_PROPOSAL);
+            expect(winningProposals[1]).to.be.eq(GREEN_PROPOSAL);
+        });
+
+    });
+
 });
