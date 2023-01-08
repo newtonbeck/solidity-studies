@@ -1,8 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const zip = (xs, ys) => xs.map((x, i) => [x, ys[i]]);
-
 describe("SampleLibraryUser", () => {
 
     describe("doSomething", () => {
@@ -26,11 +24,9 @@ describe("SampleLibraryUser", () => {
 
             const result = await contract.doubleAllNumbers([1,2,3]);
 
-            const expected = [2, 4, 6].map((x) => ethers.BigNumber.from(x));
-
-            expect(zip(result, expected)
-                    .map(([x, y]) => x.eq(y))
-                    .reduce((x, y) => x && y)).to.be.true;
+            expect(result[0]).to.be.eq(2);
+            expect(result[1]).to.be.eq(4);
+            expect(result[2]).to.be.eq(6);
         });
 
     });
