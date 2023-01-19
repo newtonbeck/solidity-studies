@@ -58,7 +58,7 @@ describe("Ballot", () => {
 
     });
 
-    describe("getRightToVote", () => {
+    describe("giveRightToVote", () => {
 
         it("should update the voter weight from 0 to 1", async () => {
             const [_, accountTwo] = await ethers.getSigners();
@@ -122,6 +122,85 @@ describe("Ballot", () => {
             // because the weight is already 1
             try {
                 await contract.giveRightToVote(accountTwo.address);
+                assert.fail("The try code should fail");
+            } catch (e) {
+                expect(e).to.be.a("Error");
+                expect(e.message).to.be.eq("Transaction reverted without a reason string");
+            }
+        });
+
+    });
+
+    describe("bulkGiveRightToVote", () => {
+
+        it("should update the voters weight from 0 to 1", async () => {
+            const [_, accountTwo, accountThree] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            const voterTwoBeforeRight = await contract.voters(accountTwo.address);
+            expect(voterTwoBeforeRight.weight).to.be.eq(0);
+
+            const voterThreeBeforeRight = await contract.voters(accountThree.address);
+            expect(voterThreeBeforeRight.weight).to.be.eq(0);
+
+            await contract.bulkGiveRightToVote([accountTwo.address, accountThree.address]);
+
+            const voterTwoAfterRight = await contract.voters(accountTwo.address);
+            expect(voterTwoAfterRight.weight).to.be.eq(1);
+
+            const voterThreeAfterRight = await contract.voters(accountThree.address);
+            expect(voterThreeAfterRight.weight).to.be.eq(1);
+        });
+
+        it("should revert when accessed by someone other than chairperson", async () => {
+            const [_, accountTwo, accountThree] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            const contractConnectedToNonChairperson = contract.connect(accountTwo);
+
+            try {
+                await contractConnectedToNonChairperson.bulkGiveRightToVote([accountTwo.address, accountThree.address]);
+                assert.fail("The try code should fail");
+            } catch (e) {
+                expect(e).to.be.a("Error");
+                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'Only the chairperson can give right to vote'");
+            }
+        });
+
+        it("should revert when at least one voter has already voted", async () => {
+            const [_, voterOne, voterTwo] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(voterOne.address);
+            await contract.connect(voterOne).vote(1);
+
+            try {
+                await contract.bulkGiveRightToVote([voterOne.address, voterTwo.address]);
+                assert.fail("The try code should fail");
+            } catch (e) {
+                expect(e).to.be.a("Error");
+                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'The voter already voted'");
+            }
+        });
+
+        it("should revert when at least one voter's weight is greater than 0", async () => {
+            const [_, accountTwo, accountThree] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("Ballot");
+            const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
+
+            await contract.giveRightToVote(accountTwo.address);
+
+            // It should fail on the second time
+            // because the weight is already 1
+            try {
+                await contract.bulkGiveRightToVote([accountTwo.address, accountThree.address]);
                 assert.fail("The try code should fail");
             } catch (e) {
                 expect(e).to.be.a("Error");

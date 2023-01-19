@@ -35,8 +35,21 @@ contract Ballot {
         }
     }
 
+    function bulkGiveRightToVote(address[] memory voters_) external {
+        require(msg.sender == chairperson, "Only the chairperson can give right to vote");
+        
+        for (uint i = 0; i < voters_.length; i++) {
+            address voter = voters_[i];
+            giveRightToVoteIndividually(voter);
+        }
+    }
+
     function giveRightToVote(address voter) external {
         require(msg.sender == chairperson, "Only the chairperson can give right to vote");
+        giveRightToVoteIndividually(voter);
+    }
+
+    function giveRightToVoteIndividually(address voter) internal {
         require(!voters[voter].voted, "The voter already voted");
         require(voters[voter].weight == 0);
 
