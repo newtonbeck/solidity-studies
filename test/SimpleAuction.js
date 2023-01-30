@@ -222,4 +222,65 @@ describe("SimpleAuction", () => {
 
     });
 
+    describe("auctionEnd", () => {
+
+        it("should not end an auction before its end time", async () => {
+            const [beneficiary] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("SimpleAuction");
+            const contract = await factory.deploy(ONE_HOUR_IN_SECONDS, beneficiary.address);
+
+            await expect(contract.auctionEnd()).to.be.revertedWithCustomError(
+                contract,
+                "AuctionNotYetEnded"
+            );
+        });
+
+        it("should not end an auction already ended", async () => {
+            const [beneficiary] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("SimpleAuction");
+            const contract = await factory.deploy(0, beneficiary.address);
+
+            await contract.auctionEnd();
+
+            await expect(contract.auctionEnd()).to.be.revertedWithCustomError(
+                contract,
+                "AuctionEndAlreadyCalled"
+            );
+        });
+
+        it("should transfer highest bid from contract to beneficiary", async () => {
+            const [beneficiary, accountOne] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("SimpleAuction");
+            // This test has a high potential to be flaky
+            const contract = await factory.deploy(1, beneficiary.address);
+
+            await contract.connect(accountOne).bid({ value: ethers.utils.parseEther("0.1") });
+
+            await expect(contract.auctionEnd()).to
+                .emit(contract, "AuctionEnded")
+                .withArgs(accountOne.address, ethers.utils.parseEther("0.1"));
+        });
+
+        it("should transfer highest bid from contract to beneficiary", async () => {
+            const [beneficiary, accountOne, accountTwo] = await ethers.getSigners();
+            
+            const factory = await ethers.getContractFactory("SimpleAuction");
+            // This test has a high potential to be flaky
+            const contract = await factory.deploy(2, beneficiary.address);
+
+            await contract.connect(accountOne).bid({ value: ethers.utils.parseEther("0.1") });
+            await contract.connect(accountTwo).bid({ value: ethers.utils.parseEther("0.2") });
+
+            expect(await ethers.provider.getBalance(contract.address)).to.be.eq(ethers.utils.parseEther("0.3"));
+
+            await contract.auctionEnd();
+
+            expect(await ethers.provider.getBalance(contract.address)).to.be.eq(ethers.utils.parseEther("0.1"));
+        });
+
+    });
+
 });

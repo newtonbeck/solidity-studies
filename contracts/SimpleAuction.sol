@@ -12,6 +12,8 @@ contract SimpleAuction {
 
     mapping(address => uint) public refunds;
 
+    bool ended;
+
     /// Error thrown when current block timestamp
     /// is higher than `auctionEndTime`
     error AuctionAlreadyEnded();
@@ -24,8 +26,21 @@ contract SimpleAuction {
     /// have any refunds to receive in the refunds list
     error AddressDoesNotHaveAnyRefundToReceive(address address_);
 
+    /// Error thrown when auction is still in progress
+    /// and users try to end the auction
+    error AuctionNotYetEnded();
+    
+    /// Error thrown when auction is already ended
+    /// and an user tries to end it again
+    error AuctionEndAlreadyCalled();
+
     /// Event fired when the highest bid increased
     event HighestBidIncreased(address highestBidder, uint highestBid);
+
+    /// Event fired when the auction ends
+    /// and the highest bid is transferred to
+    /// the beneficiary
+    event AuctionEnded(address highestBidder, uint highestBid);
 
     constructor(
         uint biddingTime,
@@ -73,6 +88,21 @@ contract SimpleAuction {
         (bool success, ) = payable(msg.sender).call{ value: pendingRefund }("");
         
         require(success, "Ether transfer was reverted");
+    }
+
+    function auctionEnd() external {
+        if (block.timestamp < auctionEndTime) {
+            revert AuctionNotYetEnded();
+        }
+        if (ended) {
+            revert AuctionEndAlreadyCalled();
+        }
+
+        ended = true;
+        emit AuctionEnded(highestBidder, highestBid);
+
+        (bool success, ) = beneficiary.call{ value: highestBid }("");
+        require(success, "Beneficiary transfer had an error and reverted the auctionEnd execution");
     }
 
 }
