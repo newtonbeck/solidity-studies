@@ -47,13 +47,8 @@ describe("Ballot", () => {
         it("should not set a proposal that was not informed during contract deployment", async () => {
             const factory = await ethers.getContractFactory("Ballot");
             const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
-    
-            try {
-                await contract.proposals(3);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-            }
+
+            await expect(contract.proposals(3)).to.be.revertedWithoutReason();
         });
 
     });
@@ -83,13 +78,9 @@ describe("Ballot", () => {
 
             const contractConnectedToNonChairperson = contract.connect(accountTwo);
 
-            try {
-                await contractConnectedToNonChairperson.giveRightToVote(accountTwo.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'Only the chairperson can give right to vote'");
-            }
+            await expect(
+                contractConnectedToNonChairperson.giveRightToVote(accountTwo.address)
+            ).to.be.revertedWith("Only the chairperson can give right to vote");
         });
 
         it("should revert when voter has already voted", async () => {
@@ -101,13 +92,9 @@ describe("Ballot", () => {
             await contract.giveRightToVote(voter.address);
             await contract.connect(voter).vote(1);
 
-            try {
-                await contract.giveRightToVote(voter.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'The voter already voted'");
-            }
+            await expect(
+                contract.giveRightToVote(voter.address)
+            ).to.be.revertedWith("The voter already voted");
         });
 
         it("should revert when voter's weight is greater than 0", async () => {
@@ -118,15 +105,9 @@ describe("Ballot", () => {
 
             await contract.giveRightToVote(accountTwo.address);
 
-            // It should fail on the second time
-            // because the weight is already 1
-            try {
-                await contract.giveRightToVote(accountTwo.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("Transaction reverted without a reason string");
-            }
+            await expect(
+                contract.giveRightToVote(accountTwo.address)
+            ).to.be.revertedWithoutReason();
         });
 
     });
@@ -162,13 +143,9 @@ describe("Ballot", () => {
 
             const contractConnectedToNonChairperson = contract.connect(accountTwo);
 
-            try {
-                await contractConnectedToNonChairperson.bulkGiveRightToVote([accountTwo.address, accountThree.address]);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'Only the chairperson can give right to vote'");
-            }
+            await expect(
+                contractConnectedToNonChairperson.bulkGiveRightToVote([accountTwo.address, accountThree.address])
+            ).to.be.revertedWith("Only the chairperson can give right to vote");
         });
 
         it("should revert when at least one voter has already voted", async () => {
@@ -180,13 +157,9 @@ describe("Ballot", () => {
             await contract.giveRightToVote(voterOne.address);
             await contract.connect(voterOne).vote(1);
 
-            try {
-                await contract.bulkGiveRightToVote([voterOne.address, voterTwo.address]);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'The voter already voted'");
-            }
+            await expect(
+                contract.bulkGiveRightToVote([voterOne.address, voterTwo.address])
+            ).to.be.revertedWith("The voter already voted");
         });
 
         it("should revert when at least one voter's weight is greater than 0", async () => {
@@ -197,15 +170,9 @@ describe("Ballot", () => {
 
             await contract.giveRightToVote(accountTwo.address);
 
-            // It should fail on the second time
-            // because the weight is already 1
-            try {
-                await contract.bulkGiveRightToVote([accountTwo.address, accountThree.address]);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("Transaction reverted without a reason string");
-            }
+            await expect(
+                contract.bulkGiveRightToVote([accountTwo.address, accountThree.address])
+            ).to.be.revertedWithoutReason();
         });
 
     });
@@ -218,13 +185,9 @@ describe("Ballot", () => {
             const factory = await ethers.getContractFactory("Ballot");
             const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
 
-            try {
-                await contract.delegate(chairperson.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'Self delegation is disallowed'");
-            }
+            await expect(
+                contract.delegate(chairperson.address)
+            ).to.be.revertedWith("Self delegation is disallowed");
         });
 
         it("should not allow delegation by a non voter", async () => {
@@ -233,13 +196,9 @@ describe("Ballot", () => {
             const factory = await ethers.getContractFactory("Ballot");
             const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
 
-            try {
-                await contract.connect(nonVoter).delegate(randomVoter.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'You have no right to vote'");
-            }
+            await expect(
+                contract.connect(nonVoter).delegate(randomVoter.address)
+            ).to.be.revertedWith("You have no right to vote");
         });
 
         it("should not allow delegation by someone who has already voted", async () => {
@@ -253,13 +212,9 @@ describe("Ballot", () => {
 
             await contract.connect(voterOne).vote(1);
 
-            try {
-                await contract.connect(voterOne).delegate(voterTwo.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'You already voted'");
-            }
+            await expect(
+                contract.connect(voterOne).delegate(voterTwo.address)
+            ).to.be.revertedWith("You already voted");
         });
 
         it("should not allow delegation loops", async () => {
@@ -274,13 +229,9 @@ describe("Ballot", () => {
             await contract.connect(voterOne).delegate(voterTwo.address);
             await contract.connect(voterTwo).delegate(chairperson.address);
 
-            try {
-                await contract.connect(chairperson).delegate(voterOne.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'Found loop in delegation'");
-            }
+            await expect(
+                contract.connect(chairperson).delegate(voterOne.address)
+            ).to.be.revertedWith("Found loop in delegation");
         });
 
         it("should not allow delegation to non voter", async () => {
@@ -289,13 +240,9 @@ describe("Ballot", () => {
             const factory = await ethers.getContractFactory("Ballot");
             const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
 
-            try {
-                await contract.delegate(nonVoter.address);
-                assert.fail("The try code should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("Transaction reverted without a reason string");
-            }
+            await expect(
+                contract.delegate(nonVoter.address)
+            ).to.be.revertedWithoutReason();
         });
 
         it("should delegate vote to another voter", async () => {
@@ -348,13 +295,9 @@ describe("Ballot", () => {
             const factory = await ethers.getContractFactory("Ballot");
             const contract = await factory.deploy([BLUE_PROPOSAL, RED_PROPOSAL, GREEN_PROPOSAL]);
 
-            try {
-                await contract.connect(nonVoter).vote(1);
-                assert.fail("Try block should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'You have no right to vote'");
-            }
+            await expect(
+                contract.connect(nonVoter).vote(1)
+            ).to.be.revertedWith("You have no right to vote");
         });
 
         it("should not allow voting twice", async () => {
@@ -367,13 +310,9 @@ describe("Ballot", () => {
 
             await contract.connect(voter).vote(1);
 
-            try {
-                await contract.connect(voter).vote(1);
-                assert.fail("Try block should fail");
-            } catch (e) {
-                expect(e).to.be.a("Error");
-                expect(e.message).to.be.eq("VM Exception while processing transaction: reverted with reason string 'You have already voted'");
-            }
+            await expect(
+                contract.connect(voter).vote(1)
+            ).to.be.revertedWith("You have already voted");
         });
 
         it("should allow a voter to vote", async () => {
